@@ -26,15 +26,13 @@ def getViewData(projectID):
 
   return [parsed_data, success]
 
-#returns 0 for no errors, 1 for API errors, and 2 for viewhacking errors
-def fixTaskCompletionOrder(projectNumber):
-    statusCode = 0
+# returns:
+# ProjectID for no errors
+# -1 for couldn't find
+def projectNumberToProjectID(projectNumber):
     with open('./appsettings.json', 'r') as file:
         # Load the JSON data
         appsettings = json.load(file)
-
-
-    print(projectNumber)
 
     # Get OAuth2 API Access in Python ✅
     headers = {
@@ -47,8 +45,6 @@ def fixTaskCompletionOrder(projectNumber):
 
     # Find Project ID from Project Number (GET Project)
     response = requests.request("GET", "https://api.avaza.com/api/Project", headers=headers, params=parameters)
-    if (response.status_code != 200 and (statusCode == 0 or statusCode == 2)):
-                    statusCode+= 1
 
     json_data = response.text 
 
@@ -56,15 +52,36 @@ def fixTaskCompletionOrder(projectNumber):
     parsed_data = json.loads(json_data)
 
 
-    projectID = ""
+    projectID = "-1"
     targetString = f"{projectNumber} - "
+    title = ""
     for project in parsed_data['Projects']:
         if project['Title'].startswith(targetString):
             projectID = project['ProjectID']
+            title = project['Title']
             break
-    if projectID == "":
-        return 4
+    if(projectID != "-1"):
+        return [projectID, title]
+    else:
+        return [projectID, "Error, Project Not Found"]
 
+#returns:
+# 0 for no errors
+# 1 for API errors
+# 2 for viewhacking errors
+# 3 for API and viewhacking errors
+# 4 for couldnt find projectNumber
+def fixTaskCompletionOrder(projectID):
+    statusCode = 0
+
+    with open('./appsettings.json', 'r') as file:
+        # Load the JSON data
+        appsettings = json.load(file)
+
+    # Get OAuth2 API Access in Python ✅
+    headers = {
+    'Authorization': f'Bearer {appsettings[f"{appsettings["mode"]}bearer"]}',
+    }
     #print(projectID)
     # Use hacked view data to find proper task order (ViewDataRetriever)
     viewDataResponse = getViewData(projectID=projectID)
